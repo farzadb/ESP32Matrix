@@ -10,14 +10,7 @@ Based on the original work by [Scott Marley](https://github.com/s-marley/ESP32Ma
 - **Web-based UI** — a browser controller page is served directly from the ESP32 at `http://<device-ip>/`. No app install required, works on any device
 - **OTA updates** — flash new firmware over WiFi (hostname: `esp32matrix`, password: `matrix-ota`)
 - **Config page** — adjust brightness, milliamps, and voltage at `http://<device-ip>/config`, saved to NVS so settings persist across reboots
-- **Breakout paddle fix** — paddle now reaches both edges of the screen
-- **Pixel art smiley fix** — smiley no longer loops back for a second partial pass
-
-## Hardware
-
-- ESP32 (tested on LOLIN D32)
-- 16×16 WS2812B LED matrix
-- Data pin: GPIO 26
+- **Other small fixes
 
 ## Setup
 
