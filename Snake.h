@@ -20,6 +20,7 @@ class Snake{
   
   public:
   Snake(){
+    shouldExitSnake = false; 
     previousMillis = 0;
     interval = 250;
     snakeLength = 1;
@@ -31,13 +32,38 @@ class Snake{
     paused = false;
   };
 
+  bool isPaused() {
+    return paused;
+  }
+
+  void reset() {
+    snakeLength = 1;
+    currentInput = UP;
+    interval = 250;
+    snakeX[0] = leds.Width() / 2;
+    snakeY[0] = leds.Height() / 2;
+    for(int i=1; i<MAX_SNAKE_LENGTH; i++){
+      snakeX[i] = snakeY[i] = -1;
+    }
+    paused = false;
+  }
+
+  void exitSnake(){
+    Serial.println("exitSnake() called");
+    Serial.printf("CurrentApp now: %d\n", currentApp);
+    paused = false; // Unpause the game so we can exit to menu 
+    shouldExitSnake = true; 
+  }
+
   void setup() {
+    shouldExitSnake = false; 
+    paused = false; 
     sprintf((char *)txtSnake, "                ");
     ScrollingMsg.SetFont(MatriseFontData);
     ScrollingMsg.Init(&leds, leds.Width(), ScrollingMsg.FontHeight() + 1, 0, 5);
     ScrollingMsg.SetBackgroundMode(BACKGND_ERASE);
     ScrollingMsg.SetScrollDirection(SCROLL_LEFT);
-    ScrollingMsg.SetFrameRate(1);
+    ScrollingMsg.SetFrameRate(4);
     ScrollingMsg.SetTextColrOptions(COLR_RGB | COLR_SINGLE, 0x00, 0x99, 0x33);
     
     currentInput = NONE;
@@ -86,9 +112,8 @@ class Snake{
       if(ScrollingMsg.UpdateText() == -1) {
         ScrollingMsg.SetText((unsigned char *)txtSnake, sizeof(txtSnake)-1);
       }
-      if (SerialBT.available()) {
-        reset();
-      }
+      // Listen for WebSocket messages
+      webSocket.loop();
     }
     else {
       //FastLED.clear();
@@ -100,25 +125,11 @@ class Snake{
         nextStep();
       }
 
-      if (SerialBT.available()) {
-        char keyPress = (char)SerialBT.read();
-        switch(keyPress) {
-          case 'w':
-            currentInput = UP;
-            break;
-          case 'a':
-            currentInput = LEFT;
-            break;
-          case 's':
-            currentInput = DOWN;
-            break;
-          case 'd':
-            currentInput = RIGHT;
-            break;
-          case 'm':
-            currentApp = -1;
-            return false;
-        }
+      // Listen for WebSocket messages
+      webSocket.loop();
+      if (shouldExitSnake == true) {
+          Serial.println("Exiting Snake");
+          return false;
       }
     }
     
@@ -129,6 +140,7 @@ class Snake{
   }
 
   private:  
+  bool shouldExitSnake; 
   void drawFruit(){
     leds(fruitX, fruitY) = CHSV(fruitHue, 255, 255);
   }
@@ -178,18 +190,6 @@ class Snake{
       sprintf((char *)txtSnake, "   SCORE %u   ", snakeLength-1);
       ScrollingMsg.SetText(txtSnake, strlen((const char *)txtSnake));
     }
-  }
-  
-  void reset() {
-    snakeLength = 1;
-    currentInput = UP;
-    interval = 250;
-    snakeX[0] = leds.Width() / 2;
-    snakeY[0] = leds.Height() / 2;
-    for(int i=1; i<MAX_SNAKE_LENGTH; i++){
-      snakeX[i] = snakeY[i] = -1;
-    }
-    paused = false;
   }
   
   boolean inPlayField(int x, int y){

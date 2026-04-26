@@ -6,6 +6,7 @@ class Breakout {
   uint8_t blocksRemaining;
   cLEDText ScrollingMsg;
   unsigned char txtBreakout[20];
+  bool shouldExitBreakout; 
 
   const uint8_t paddleData[1] = { B8_1BIT(01111000) };
   const uint8_t paddleMask[1] = { B8_1BIT(11111100) };
@@ -71,9 +72,26 @@ class Breakout {
   uint16_t PlasmaTime, PlasmaShift;
   
   public:
-  Breakout():Sprites(&leds){};
+  bool getIsStartup(){
+    return startUp;
+  }
+
+  void setIsStartup(bool s){
+    startUp = s;
+  }
+
+  Breakout():Sprites(&leds){
+    shouldExitBreakout = false;
+  };
+
+  void exitBreakout(){
+    Serial.println("exitBreakout() called");
+    Serial.printf("CurrentApp now: %d\n", currentApp);
+    shouldExitBreakout = true; 
+  }
 
   void setup(){
+    shouldExitBreakout = false;
     // Create paddle
     sprPaddle.Setup(paddleWidth, paddleHeight, paddleData, 1, _1BIT, paddleColorTable, paddleMask);
     sprPaddle.SetPosition(sliderPosition,0);
@@ -123,26 +141,31 @@ class Breakout {
       sprBall.SetPosition(sliderPosition+1,1);
     }
     
-    if (SerialBT.available()) {
-      byte keyPress = SerialBT.read();
-      // If it's greater than 20 we sent a character instead
-      if(keyPress > 20) {
-        if(startUp) {
-          sprBall.SetMotion(1, ballRate, 1, ballRate);
-          startUp = false;
-        }
-        switch((char)keyPress) {
-          case 'm':
-            currentApp = -1;
-            return false;
-        }
-      } else {
-        sliderPosition = (int8_t)keyPress - 1;
-      }
+    // Listen for WebSocket messages
+    webSocket.loop();
+    if (shouldExitBreakout == true) {
+        Serial.println("Exiting Breakout");
+        return false;
     }
-    
+
+    // Move paddle
+    if (currentInput == LEFT) {
+      if (sliderPosition > -1) sliderPosition--;
+      currentInput = NONE;
+    } else if (currentInput == RIGHT) {
+      if (sliderPosition < MATRIX_WIDTH - paddleWidth + 1) sliderPosition++;
+      currentInput = NONE;
+    }
+
+    // Launch ball on startup with any directional input
+    if (startUp && currentInput != NONE && currentInput != MENU) {
+      sprBall.SetMotion(1, ballRate, 1, ballRate);
+      startUp = false;
+      currentInput = NONE;
+    }
+
     //FastLED.clear();
-    
+
     sprPaddle.SetPosition(sliderPosition,0);
     
     Sprites.UpdateSprites();
@@ -222,7 +245,7 @@ class Breakout {
     else {
       // If hit bottom of screen and NOT collided with paddle, reset game
       if(sprBall.GetFlags() & SPRITE_EDGE_Y_MIN) {
-        return false;
+        return false; // TODO
       }
     }
 

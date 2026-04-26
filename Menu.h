@@ -2,13 +2,34 @@ class Menu {
   cLEDText ScrollingMsg;
   unsigned char txtMenu[12];
   int menuItem;
+  bool shouldExitMenu;
   
   public:
   Menu(){
     menuItem = 0;  
+    shouldExitMenu = false;
   };
 
+  void exitMenu() {
+    Serial.println("exitMenu() called");
+    Serial.printf("CurrentApp now: %d\n", currentApp);
+    shouldExitMenu = true;
+  }
+
+  int getMenuItem() {
+    Serial.printf("In getMenuItem() and menuItem is: %d\n", menuItem);
+    return menuItem;
+  }
+
+  void setMenuItem(int m) {
+    Serial.printf("In setMenuItem() and menuItem is: %d\n", menuItem);
+    menuItem = m;
+  }
+
   void setup() {
+    Serial.printf("In setup() and menuItem is: %d\n", menuItem);
+    shouldExitMenu = false;
+    menuItem = 0;
     sprintf((char *)txtMenu, "           ");
     ScrollingMsg.SetFont(MatriseFontData);
     ScrollingMsg.Init(&leds, leds.Width(), ScrollingMsg.FontHeight() + 1, 0, 5);
@@ -17,7 +38,7 @@ class Menu {
     ScrollingMsg.SetFrameRate(5);
     ScrollingMsg.SetTextColrOptions(COLR_RGB | COLR_SINGLE, 0xff, 0x00, 0xff);
     FastLED.clear();
-    
+
     menuChanged(0);
   }
 
@@ -35,26 +56,15 @@ class Menu {
     
     displayMenu();
         
-    if(SerialBT.available()){
-        char keyPress = (char)SerialBT.read();
-        switch(keyPress) {
-          case 'a':
-            if(--menuItem < 0 ) menuItem = 2;
-            menuChanged(menuItem);
-            break;
-          case 'd':
-            menuItem = ++menuItem % 4;
-            menuChanged(menuItem);
-            break;
-          case 'r':
-          case 'y':
-          case 'g':
-          case 'b':
-            currentApp = menuItem;
-            return false;
-        }
+    // Listen for WebSocket messages
+    webSocket.loop();
+
+    if (shouldExitMenu == true) {
+      Serial.printf("Exiting Menu to the next App: %d\n", currentApp);
+      return false;
+    } else {
+      return true;
     }
-    return true;
   }
 
   void DrawOneFrame( byte startHue8, int8_t yHueDelta8, int8_t xHueDelta8)
@@ -70,8 +80,8 @@ class Menu {
     }
   }
 
-  private:
   void menuChanged(int menuItem) {
+    Serial.printf("menuChanged() menuItem: %d\n", menuItem);
     switch (menuItem) {
       case 0:
         //Tetris highlighted
@@ -93,11 +103,11 @@ class Menu {
     ScrollingMsg.SetText((unsigned char *)txtMenu, sizeof(txtMenu)-1);
   }
   
+private:
   void displayMenu() {
     if(ScrollingMsg.UpdateText() == -1)
       ScrollingMsg.SetText((unsigned char *)txtMenu, sizeof(txtMenu)-1);
     else
       FastLED.show();
   }
-  
 };

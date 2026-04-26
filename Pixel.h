@@ -266,6 +266,7 @@ class Pixel{
   
   struct CRGB Spriteinvader3Cols[1] = { CRGB(255,255,255) };
 
+
   uint8_t rectHue = 0;
   uint8_t seconds = 0;
   uint8_t secondsTrigger = 0;
@@ -285,9 +286,19 @@ class Pixel{
   uint8_t plasmaLowHue, plasmaHighHue, plasmaBrightness;
 
   public:
-  Pixel():Sprites(&leds){};
+  Pixel():Sprites(&leds){
+    shouldExitPixelArt = false;
+  };
+
+  void exitPixelArt(){
+    Serial.println("exitPixelArt() called");
+    Serial.printf("CurrentApp now: %d\n", currentApp);
+    shouldExitPixelArt = true; 
+  }
 
   void setup(){
+    Serial.println("Pixel Art setup() called");
+    shouldExitPixelArt = false;
     PlasmaShift = (random8(0, 5) * 32) + 64;
     PlasmaTime = 0;
     plasmaLowHue = 100;
@@ -358,22 +369,17 @@ class Pixel{
       }
     }
 
-    if (SerialBT.available()) {
-      char keyPress = (char)SerialBT.read();
-      switch(keyPress) {
-        case 'm':
-          currentApp = -1;
-          return false;
-      }
+    // Listen for WebSocket messages
+    webSocket.loop();
+    if (shouldExitPixelArt == true) {
+        Serial.println("Exiting Pixel Art");
+        return false;
     }
 
     plasmaBrightness = 200;
 
     switch (sprite) {
       case 0:   // Rolling acid smiley
-        if(sprSmiley.m_X > leds.Width()) {
-          sprSmiley.m_X = -15;
-        }
         break;
       case 2:   //Invaders
         background = 3;
@@ -393,6 +399,7 @@ class Pixel{
   }
 
   private:
+  bool shouldExitPixelArt;
 
   void setupAlien() {
     sprAlien.Setup(16, 16, SpritealienData, 1, _2BIT, SpritealienCols, SpritealienMask);

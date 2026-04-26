@@ -5,6 +5,8 @@ class Tetris {
   #define TARGET_FRAME_TIME    15  // Desired update rate, though if too many leds it will just run as fast as it can!
   #define INITIAL_DROP_FRAMES  20  // Start of game block drop delay in frames
 
+  bool shouldExitTetris;
+
   const uint8_t TetrisIData[48] = 
   {
     // Frame 1
@@ -354,9 +356,18 @@ class Tetris {
   uint32_t LoopDelayMS, LastLoop;
 
   public:
-  Tetris():Sprites(&leds){};
+  Tetris():Sprites(&leds){
+    shouldExitTetris = false;
+  };
+
+  void exitTetris(){
+    Serial.println("exitTetris() called");
+    Serial.printf("CurrentApp now: %d\n", currentApp);
+    shouldExitTetris = true; 
+  }
 
   void setup() {
+      shouldExitTetris = false; 
       memset(PlayfieldData, 0, sizeof(PlayfieldData));
       memset(PlayfieldMask, 0, sizeof(PlayfieldMask));
       Playfield.Setup(leds.Width(), leds.Height(), PlayfieldData, 1, _3BIT, TetrisColours, PlayfieldMask);
@@ -374,7 +385,7 @@ class Tetris {
       TetrisMsg.SetBackgroundMode(BACKGND_LEAVE);
       TetrisMsg.SetScrollDirection(SCROLL_UP);
       TetrisMsg.SetTextDirection(CHAR_UP);
-      TetrisMsg.SetFrameRate(1);
+      TetrisMsg.SetFrameRate(4);
       TetrisMsg.SetOptionsChangeMode(INSTANT_OPTIONS_MODE);
       TetrisMsg.SetText(AttractMsg, strlen((const char *)AttractMsg));
       AttractMode = true;
@@ -385,7 +396,7 @@ class Tetris {
   }
   
   boolean loop() {
-    if (abs(millis() - LastLoop) >= LoopDelayMS)
+    if (abs(static_cast<int>(((int)millis() - LastLoop))) >= LoopDelayMS)
       {
         LastLoop = millis();
         FastLED.clear();
@@ -616,26 +627,13 @@ class Tetris {
         }
         FastLED.show();
       }
-      if(SerialBT.available()){
-        char keyPress = (char)SerialBT.read();
-        switch(keyPress) {
-          case 'w':
-            currentInput = UP;
-            break;
-          case 'a':
-            currentInput = LEFT;
-            break;
-          case 's':
-            currentInput = DOWN;
-            break;
-          case 'd':
-            currentInput = RIGHT;
-            break;
-          case 'm':
-            currentApp = -1;
-            return false;
-        }
+      // Listen for WebSocket messages
+      webSocket.loop();
+      if (shouldExitTetris == true) {
+          Serial.println("Exiting Tetris");
+          return false;
       }
+
     return true;
     };
 };
